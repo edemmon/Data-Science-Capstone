@@ -1,0 +1,235 @@
+---
+title: "Data Science Capstone - Milestone Report"
+author: "Elizabeth Storm"
+date: "February 27, 2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+Synoposis: This document was created to meet the requirements of the Milestone Report required for the Data Science Capstone on Coursera. The goal of this project is just to display that I've gotten used to working with the data and that I am on track to create my prediction algorithm.  
+
+## Basic Data Step Up and Summary
+
+At the onset it is important to download the data and do some basic checks on the files. This is helpful just in part to understand the size of the data in comparison to your own computing power. I am running my analysis on my local machine, so I am going to be limited in the size of my data that I'll be able to work with.  
+
+```{r loaddata, results='hide', message=FALSE, warning=FALSE}
+#load libraries
+library(NLP);library(tm);library(R.utils); library(stringi) 
+library(ggplot2); library(knitr);  library(RWeka)
+
+#download the data
+setwd("~/R/Capstone work")
+if(!file.exists("Coursera-SwiftKey.zip")){
+        url <- "https://d396qusza40orc.cloudfront.net/dsscapstone/dataset/Coursera-SwiftKey.zip"
+        download.file(url,"Coursera-SwiftKey.zip")
+        unzip("Coursera-SwiftKey.zip")
+}
+```
+It is helpful to understand a bit of the high level details on what we downloaded. This table outlines names of the files and their sizes. I also broke out what language each it in. 
+
+```{r meta, message=FALSE, warning=FALSE}
+#take a look at what has been downloaded
+zipfile_meta <- unzip("Coursera-SwiftKey.zip", list = T)
+zipfile_meta <- zipfile_meta[zipfile_meta$Length>0,]
+zipfile_meta$Language <- substr(zipfile_meta$Name, 7, 8)
+print(zipfile_meta)
+```
+
+Moving foward, I am only interested in the US files. As a result of reviewing this table, I know I am going to have to sample the datasets.I want to take roughly even amounts of words from each, so I am varying my sampling methods from each dataset to result in a small enough file to work with going forward.   
+
+```{r sample, message=FALSE, warning=FALSE}
+#create a sample dataset for US Twitter Data
+con_file <-file("final/en_US/en_US.twitter.txt","r")
+us_twitter <- readLines(con_file, skipNul = TRUE, encoding = "UTF-8")
+set.seed(888)
+sample_twitter1 <-us_twitter[rbinom(length(us_twitter)*0.0025,length(us_twitter),0.1)]
+sample_twitter <- iconv(sample_twitter1, 'UTF-8', 'ASCII') #needed to remove emoji
+writeLines(sample_twitter, con="US_Twitter_Sample.txt")
+close(con_file)
+#create a sample dataset for US Blogs Data
+con_file <-file("final/en_US/en_US.blogs.txt","r")
+us_blogs <- readLines(con_file, skipNul = TRUE, encoding = "UTF-8")
+set.seed(888)
+sample_blogs <-us_blogs[rbinom(length(us_blogs)*0.001,length(us_blogs),0.1)]
+writeLines(sample_blogs, con="US_Blogs_Sample.txt")
+close(con_file)
+#create a sample dataset for US News Data
+con_file <-file("final/en_US/en_US.news.txt","r")
+us_news <- readLines(con_file, skipNul = TRUE, encoding = "UTF-8")
+set.seed(888)
+sample_news <-us_news[rbinom(length(us_news)*0.01,length(us_news),0.1)]
+writeLines(sample_news, con="US_News_Sample.txt")
+close(con_file)
+
+#merge sample data
+sample_data <- paste(sample_blogs, sample_news, sample_twitter)
+```
+Here is a summarized table showing the original datasets versus the samples taken.
+
+```{r summary, message=FALSE, warning=FALSE}
+# file sizes
+fs_twitter <- file.info("final/en_US/en_US.twitter.txt")$size
+fs_blogs   <- file.info("final/en_US/en_US.blogs.txt")$size
+fs_news    <- file.info("final/en_US/en_US.news.txt")$size
+fs_stwitter <- file.info("US_Twitter_Sample.txt")$size
+fs_sblogs   <- file.info("US_Blogs_Sample.txt")$size
+fs_snews    <- file.info("US_News_Sample.txt")$size
+
+fs <- c(fs_twitter, fs_blogs, fs_news, fs_stwitter, fs_sblogs, fs_snews )
+
+# line counts
+lc_twitter <- length(us_twitter)
+lc_blogs   <- length(us_blogs)
+lc_news    <- length(us_news)
+lc_stwitter <- length(sample_twitter)
+lc_sblogs   <- length(sample_blogs)
+lc_snews    <- length(sample_news)
+
+lc <- c( lc_twitter, lc_blogs, lc_news, lc_stwitter, lc_sblogs, lc_snews)
+
+# word counts
+wc_twitter <- sum(stri_count_words(us_twitter))
+wc_blogs   <- sum(stri_count_words(us_blogs))
+wc_news    <- sum(stri_count_words(us_news))
+wc_stwitter <- sum(stri_count_words(sample_twitter1))
+wc_sblogs   <- sum(stri_count_words(sample_blogs))
+wc_snews    <- sum(stri_count_words(sample_news))
+
+wc <- c( wc_twitter, wc_blogs, wc_news, wc_stwitter, wc_sblogs, wc_snews)
+
+dset_names <- c("twitter","blogs", "news","sample_twitter","sample_blogs", "sample_news")
+stat <- data.frame(dset_names, fs, lc, wc)
+colnames(stat) <- c("Dataset names", "Size in bytes", "Line count", "Word count")
+kable(stat, format="markdown", caption = "Basic statistics of the datasets")
+```
+```{r cleanup1, include=FALSE}
+#remove files you don't need
+rm(us_twitter,us_blogs,us_news)
+rm(sample_twitter,sample_blogs,sample_news)
+rm(fs_twitter, fs_blogs, fs_news, fs_stwitter, fs_sblogs, fs_snews)
+rm(lc_twitter, lc_blogs, lc_news, lc_stwitter, lc_sblogs, lc_snews)
+rm(wc_twitter, wc_blogs, wc_news, wc_stwitter, wc_sblogs, wc_snews)
+```
+## Creating the Corpus and Tokenization
+
+We are now ready to create the corpus (https://en.wikipedia.org/wiki/Text_corpus) which is the cleaned up, structured version of the data. Included below are steps to remove punctuation and numbers, move to lower case, and remove white space. I thought about stopwords and stemming, but since I am building a tool to predict the next words given the prior words, I actually decided I don't want to exclude these items. You cannot make sentences be coherent without stop words. I did however remove profanity. Keep it clean people!
+
+```{r corpus, message=FALSE, warning=FALSE}
+##Make corpus
+corpus <- VCorpus(VectorSource(sample_data))
+
+corpus <- tm_map(corpus, removePunctuation)                 # Remove punctuation
+corpus <- tm_map(corpus, removeNumbers)                     # Remove numbers
+corpus <- tm_map(corpus, tolower)                           # Convert to lower case
+#corpus <- tm_map(corpus, removeWords, stopwords(kind="en")) # Remove (English) stopwords
+#corpus <- tm_map(corpus, stemDocument)                      # Do stemming
+corpus <- tm_map(corpus, stripWhitespace)                   # Remove (remaining) whitespace
+corpus <- tm_map(corpus, PlainTextDocument)                 # Process as text documents
+
+##Profanity filter
+if(!file.exists("swearWords.txt")){
+        url <- "http://www.bannedwordlist.com/lists/swearWords.txt"
+        download.file(url,"swearWords.txt")
+}
+profanity_list <- readLines("swearWords.txt")
+corpus <- tm_map(corpus, removeWords, profanity_list)
+```
+
+Now I am going to Tokenize (https://en.wikipedia.org/wiki/Lexical_analysis#Tokenization) the corpus for single words, 2-grams, and 3-grams. 
+
+```{r tokenize, message=FALSE, warning=FALSE}
+##Tokanization
+UnigramTokenizer   <- function(x) NGramTokenizer(x, Weka_control(min = 1, max = 1))
+BigramTokenizer   <- function(x) NGramTokenizer(x, Weka_control(min = 2, max = 2))
+TrigramTokenizer <- function(x) NGramTokenizer(x, Weka_control(min = 3, max = 3))
+
+dtm_uni   <- DocumentTermMatrix(corpus, control=list(tokenize=UnigramTokenizer))
+dtm_bi   <- DocumentTermMatrix(corpus, control=list(tokenize=BigramTokenizer))
+dtm_tri <- DocumentTermMatrix(corpus, control=list(tokenize=TrigramTokenizer))
+
+
+```
+```{r cleanup2, include=FALSE}
+##Remove unnecessary files
+rm(corpus)
+```
+##Data Visualization of the Results
+The next helpful step will be to review the resulting data in a summarized manner to get a feel for it. 
+
+I am going to look first at the distribution of the N-grams across percentiles. For single words, we see that the top 30 words will account for roughly 75% of the tokens, but we have 26,584 unique tokens. For two words, the top 30 account for between 90% and 95%, and for three words the top 30 account for between 95% and 99%. 
+
+```{r quants, message=FALSE, warning=FALSE}
+##calculate frequency
+uni_frequency   <- sort(colSums(as.matrix(dtm_uni)), decreasing=TRUE)
+bi_frequency   <- sort(colSums(as.matrix(dtm_bi)), decreasing=TRUE)
+tri_frequency <- sort(colSums(as.matrix(dtm_tri)), decreasing=TRUE)
+
+#produce quantiles
+Uniquant <- quantile(uni_frequency,probs=c(0,25,50,75,90,95,99,100)/100)
+Uniquant
+biquant <- quantile(bi_frequency,probs=c(0,25,50,75,90,95,99,100)/100)
+biquant
+triquant <- quantile(tri_frequency,probs=c(0,25,50,75,90,95,99,100)/100)
+triquant
+
+```
+
+I am also going to look at the distribution plots across the top 30 unique tokens for each N gram. 
+
+```{r boxplots, message=FALSE, warning=FALSE}
+##calculate plots
+Uni_df <- as.data.frame(uni_frequency[1:30])
+colnames(Uni_df) <- c("freq")
+Uni_df$term <- rownames(Uni_df)
+Uni_df$term <- factor(Uni_df$term, levels=Uni_df$term[order(-Uni_df$freq)])
+ugp <- ggplot(subset(Uni_df, Uni_df$freq>30), aes(term, freq, fill=term))
+ugp <- ugp + geom_bar(stat="identity")+
+        ggtitle("Frequency Plot of Unigram Tokens/Terms")+
+        xlab("Unigram Token/Term")+
+        ylab("Frequency")+
+        theme(axis.text.x=element_text(angle=45, hjust=1))+ 
+        theme(legend.position = "none")
+ugp
+
+bi_df <- as.data.frame(bi_frequency[1:30])
+colnames(bi_df) <- c("freq")
+bi_df$term <- rownames(bi_df)
+bi_df$term <- factor(bi_df$term, levels=bi_df$term[order(-bi_df$freq)])
+
+bgp <- ggplot(subset(bi_df, bi_df$freq>30), aes(term, freq, fill=term))
+bgp <- bgp + geom_bar(stat="identity")+
+        ggtitle("Frequency Plot of Bigram Tokens/Terms")+
+        xlab("Bigram Token/Term")+
+        ylab("Frequency")+
+        theme(axis.text.x=element_text(angle=45, hjust=1))+ 
+        theme(legend.position = "none")
+bgp
+
+tri_df <- as.data.frame(tri_frequency[1:30])
+colnames(tri_df) <- c("freq")
+tri_df$term <- rownames(tri_df)
+tri_df$term <- factor(tri_df$term, levels=tri_df$term[order(-tri_df$freq)])
+
+tgp <- ggplot(subset(tri_df, tri_df$freq>30), aes(term, freq, fill=term))
+tgp <- tgp + geom_bar(stat="identity")+
+        ggtitle("Frequency Plot of Trigram Tokens/Terms")+
+        xlab("Trigram Token/Term")+
+        ylab("Frequency")+
+        theme(axis.text.x=element_text(angle=45, hjust=1))+ 
+        theme(legend.position = "none")
+tgp
+
+```
+
+##Takeaways and Next Steps
+As I think about building towards the final project, this Milestone Report process helped me understand that I am really going to have to think about file size and processing time. The datasets provided are huge, and more data could provide better results, but my computer has limited memory. Also, for the end user, there is a limit to the amount of wait time people will accept before they abandon a tool. I will want to keep these two items front and center as I proceed forward. 
+
+I am planning the following for next steps:
+1. Build a Training / Validation / Holdout set.
+2. Start with testing a prediction algorithm that is basic, then expand to allow for inputs of words that do not appear in the modeling dataset.
+3. Iterate between training and validating my model to refine it. 
+4. Evaluate my model on Holdout.
+5. Build my Shiny App as a platform for the model.
+6. Develop the Pitch presentation for the App.
