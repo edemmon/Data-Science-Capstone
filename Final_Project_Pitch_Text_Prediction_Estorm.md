@@ -79,4 +79,6 @@ Documentation
 
 3. Link to the app:
 
+<https://edemmon.shinyapps.io/text_prediction/>
+
 
