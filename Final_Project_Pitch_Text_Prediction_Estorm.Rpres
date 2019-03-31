@@ -17,12 +17,22 @@ For my capstone in the Data Science Specialization, I have built a similar app a
 
 How did I do this?
 
-Algorithm Behind the App
+Algorithm Behind the App (1)
 ========================================================
 
-Since this was my first time working with a text dataset, I am using a simple Backoff Model. The algorithm takes the last n-1 words of the sentence and finds it in the appropriate n-gram frequency table. I enhanced it to also search all variations of n-grams, such as looking for the last two words in the 4-gram table, taking the 1st & 2nd, 2nd & 3rd, and 1st and 3rd word cominations. 
+Since this was my first time working with a text dataset, I am using a simple Backoff Model. 
 
-For example: The 4-gram "President Barack Obama bypassed" will return "bypassed as the next word and is available for matching as: 
+The algorithm takes the last n-1 words of the sentence and finds it in the appropriate n-gram frequency table. 
+
+I enhanced it to also search all variations of n-grams, such as looking for the last two words in the 4-gram table, taking the 1st & 2nd, 2nd & 3rd, and 1st and 3rd word cominations. 
+
+
+Algorithm Behind the App (2)
+========================================================
+
+For example: 
+
+The 4-gram "President Barack Obama bypassed" will return "bypassed as the next word and is available for matching as: 
 - "President Barack Obama" 
 - "President Barack 
 - "President Obama"
@@ -30,10 +40,14 @@ For example: The 4-gram "President Barack Obama bypassed" will return "bypassed 
 
 If the last three words of a sentence are "then President Obama" then the algorithm will return "bypassed" based on matching the 1st and 3rd word from the 4-gram above.
 
-For each n-gram found in the dataset, the frequency is scored, such that 4-grams get the most weight and 1-grams get the least. 
-        Score = Frequency of n-gram / sum(all frequencies) * weight
-The predicted word with the highest score is chosen.
+Algorithm Behind the App (3)
+========================================================
 
+For each n-gram found in the dataset, the frequency is scored, such that 4-grams get the most weight and 1-grams get the least. 
+
+        Score = Frequency of n-gram / sum(all frequencies) * weight
+        
+The predicted word with the highest score is chosen.
 
 How to Use the App
 ========================================================
@@ -47,9 +61,13 @@ Over all the app is really simple to use:
 
 Note: when you first launch the app, the default shows you what is predicted if nothing is input. These words are also what the app will default to if your words are not found in the dataset. 
 
+Notes on Improvement
+========================================================
 
+- I generated the dataset of the most frequency n-grams (n=1 to 5) using a small random sample of the full data available. My computing power was limited so my sample data only have ~60K lines. I used stop words in everything but my 1-grams, but removed sparse records with stop words. Adding more records would improve the prediction accuracy.
+- Adding parts of speach and getting into more complicated Natural Language Processing would also make a better model. I am just glad this one runs.
 
-Documentation & Notes on Improvement
+Documentation
 ========================================================
 1. GitHub directory:
 
@@ -59,7 +77,6 @@ Documentation & Notes on Improvement
 
 <https://github.com/edemmon/Data-Science-Capstone/blob/master/data_creation.R>
 
-3. Notes on Improvement:
+3. Link to the app:
 
-- I generated the dataset of the most frequency n-grams (n=1 to 5) using a small random sample of the full data available. My computing power was limited so my sample data only have ~60K lines. I used stop words in everything but my 1-grams, but removed sparse records with stop words. Adding more records would improve the prediction accuracy.
-- Adding parts of speach and getting into more complicated Natural Language Processing would also make a better model. I am just glad this one runs.
+

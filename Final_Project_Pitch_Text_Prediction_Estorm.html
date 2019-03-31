@@ -811,11 +811,23 @@ Well this is for you! SwiftKey is a company dedicated to improving the keyboard 
 
 </section>
 <section data-transition="linear" data-transition-speed="default">
-<h3>Algorithm Behind the App</h3>
+<h3>Algorithm Behind the App (1)</h3>
 <div class="slideContent" >
-<p>Since this was my first time working with a text dataset, I am using a simple Backoff Model. The algorithm takes the last n-1 words of the sentence and finds it in the appropriate n-gram frequency table. I enhanced it to also search all variations of n-grams, such as looking for the last two words in the 4-gram table, taking the 1st &amp; 2nd, 2nd &amp; 3rd, and 1st and 3rd word cominations. </p>
+<p>Since this was my first time working with a text dataset, I am using a simple Backoff Model. </p>
 
-<p>For example: The 4-gram &ldquo;President Barack Obama bypassed&rdquo; will return &ldquo;bypassed as the next word and is available for matching as: </p>
+<p>The algorithm takes the last n-1 words of the sentence and finds it in the appropriate n-gram frequency table. </p>
+
+<p>I enhanced it to also search all variations of n-grams, such as looking for the last two words in the 4-gram table, taking the 1st &amp; 2nd, 2nd &amp; 3rd, and 1st and 3rd word cominations. </p>
+
+</div>
+
+</section>
+<section data-transition="linear" data-transition-speed="default">
+<h3>Algorithm Behind the App (2)</h3>
+<div class="slideContent" >
+<p>For example: </p>
+
+<p>The 4-gram &ldquo;President Barack Obama bypassed&rdquo; will return &ldquo;bypassed as the next word and is available for matching as: </p>
 
 <ul>
 <li>&quot;President Barack Obama&rdquo; </li>
@@ -826,9 +838,18 @@ Well this is for you! SwiftKey is a company dedicated to improving the keyboard 
 
 <p>If the last three words of a sentence are &ldquo;then President Obama&rdquo; then the algorithm will return &ldquo;bypassed&rdquo; based on matching the 1st and 3rd word from the 4-gram above.</p>
 
-<p>For each n-gram found in the dataset, the frequency is scored, such that 4-grams get the most weight and 1-grams get the least. 
-        Score = Frequency of n-gram / sum(all frequencies) * weight
-The predicted word with the highest score is chosen.</p>
+</div>
+
+</section>
+<section data-transition="linear" data-transition-speed="default">
+<h3>Algorithm Behind the App (3)</h3>
+<div class="slideContent" >
+<p>For each n-gram found in the dataset, the frequency is scored, such that 4-grams get the most weight and 1-grams get the least. </p>
+
+<pre><code>    Score = Frequency of n-gram / sum(all frequencies) * weight
+</code></pre>
+
+<p>The predicted word with the highest score is chosen.</p>
 
 </div>
 
@@ -851,7 +872,18 @@ The predicted word with the highest score is chosen.</p>
 
 </section>
 <section data-transition="linear" data-transition-speed="default">
-<h3>Documentation &amp; Notes on Improvement</h3>
+<h3>Notes on Improvement</h3>
+<div class="slideContent" >
+<ul>
+<li>I generated the dataset of the most frequency n-grams (n=1 to 5) using a small random sample of the full data available. My computing power was limited so my sample data only have ~60K lines. I used stop words in everything but my 1-grams, but removed sparse records with stop words. Adding more records would improve the prediction accuracy.</li>
+<li>Adding parts of speach and getting into more complicated Natural Language Processing would also make a better model. I am just glad this one runs.</li>
+</ul>
+
+</div>
+
+</section>
+<section data-transition="linear" data-transition-speed="default">
+<h3>Documentation</h3>
 <div class="slideContent" >
 <ol>
 <li>GitHub directory:</li>
@@ -866,13 +898,8 @@ The predicted word with the highest score is chosen.</p>
 <p><a href="https://github.com/edemmon/Data-Science-Capstone/blob/master/data_creation.R">https://github.com/edemmon/Data-Science-Capstone/blob/master/data_creation.R</a></p>
 
 <ol>
-<li>Notes on Improvement:</li>
+<li>Link to the app:</li>
 </ol>
-
-<ul>
-<li>I generated the dataset of the most frequency n-grams (n=1 to 5) using a small random sample of the full data available. My computing power was limited so my sample data only have ~60K lines. I used stop words in everything but my 1-grams, but removed sparse records with stop words. Adding more records would improve the prediction accuracy.</li>
-<li>Adding parts of speach and getting into more complicated Natural Language Processing would also make a better model. I am just glad this one runs.</li>
-</ul>
 
 </div>
 
