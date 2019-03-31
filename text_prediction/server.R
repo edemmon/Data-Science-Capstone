@@ -8,7 +8,10 @@
 #
 
 library(shiny)
-
+library(NLP);library(tm);library(R.utils); library(stringi) 
+library(knitr);  library(RWeka); library(caret); library(tidyr)
+library(dplyr)
+load("ngrams.RData")
 
 textcleanse <- function(input, type){
         # type of output, vector or string
